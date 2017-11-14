@@ -1,4 +1,10 @@
-<!DOCTYPE html><!--
+<!DOCTYPE html>
+<html>
+<head>
+<title>Photos</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<!--
 
    __             _
   /   |  ° _|_ _ |_)|_  _ _|_ _  _ 
@@ -43,12 +49,8 @@
 
 -->
 
-<html>
-<head>
-<title>Photos</title>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-
 <script>
+
 var images = new Array();
 var totalImg = 0;
 var loadedImg = -1;
@@ -347,7 +349,7 @@ h1 {
   text-shadow: 1px 1px #aaa;
 }
 
-h1 div {
+h1 span {
   display: inline-block;
   background-color: #fff;
   padding: 5px;
@@ -541,7 +543,7 @@ h1 div {
 </head>
 
 <body>
-<h1 id="title"><div>Photos</div></h1>
+<h1 id="title"><span>Photos</span></h1>
 <div id="progressBar">
   <div></div>
   <span>Loading...</span>
