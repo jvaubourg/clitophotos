@@ -1,0 +1,560 @@
+<!DOCTYPE html><!--
+
+   __             _
+  /   |  ° _|_ _ |_)|_  _ _|_ _  _ 
+  \__ |  |  |_(_)|  | |(_) |_(_)_>  v1.0
+
+  [Manual]
+
+    Just put your photos in an img/ directory, and this index.html file in the parent directory.
+    Your webserver has to have the +Indexes directive (directory listing) enabled at least for img/.
+  
+    For the photo gallery of an event named "eventName" (https://example.com/eventName/), you should have:
+      % ls eventName/
+      index.html img
+  
+    Resizing and rotating:
+      % for i in myPhotos/*; do convert $i -resize 1024x1024 eventName/img/$(basename $i); done 
+      % exiftran -ai eventName/img/*
+
+  [Shortcuts]
+
+    - Keyboards
+        Next photo:      RightArrow / UpArrow / J / PageUp / Space
+        Previous photo:  LeftArrow / DownArrow / K / PageDown
+        First photo:     Home
+        Last photo:      End
+        Show full-size:  F
+        Close show room: Escape
+
+    - Touchscreens
+        Next photos:     SwipeToLeft / Tap
+        Previous photos: SwipeToRight
+        Close show room: SwipeUp / SwipeDown
+
+  [License]
+
+    Julien Vaubourg (c) 2017
+    WTFPL v2
+
+  [Contribute]
+
+    https://github.com/jvaubourg/clitophotos
+
+-->
+
+<html>
+<head>
+<title>Photos</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<script>
+var images = new Array();
+var totalImg = 0;
+var loadedImg = -1;
+var touchXDown = null;                                                        
+var touchYDown = null;                                                        
+
+window.addEventListener('load', start, false);
+
+function start() {
+  document.addEventListener('keydown', shortcuts);
+
+  document.getElementById('nextImg').addEventListener('click', nextImg, false);
+  document.getElementById('previousImg').addEventListener('click', previousImg, false);
+  document.getElementById('closeImg').addEventListener('click', closeImg, false);
+  document.getElementById('fullImg').addEventListener('click', fullImg, false);
+  document.addEventListener('touchstart', touchStart, false);
+  document.addEventListener('touchmove', touchMove, false);
+
+  updatePageTitle();
+  createGallery();
+}
+
+function updatePageTitle() {
+  const dirName = window.location.href.replace(/.*\/([^\/]+)\/?/, "$1");
+  const dirNameCapitalized = dirName.charAt(0).toUpperCase() + dirName.slice(1);
+  document.getElementById('title').firstElementChild.textContent = dirNameCapitalized;
+  document.title = 'Photos of ' + dirNameCapitalized;
+}
+
+function updateProgressBar() {
+  const progressBar = document.getElementById('progressBar').querySelector('div');
+  const progressTxt = document.getElementById('progressBar').querySelector('span');
+  const newPercentValue = Math.ceil(100 / totalImg * loadedImg);
+
+  progressBar.style.width = newPercentValue + '%';
+  progressTxt.textContent = ++loadedImg + ' / ' + totalImg;
+
+  if(loadedImg == totalImg) {
+    document.getElementById('progressBar').style.display = 'none';
+  }
+}
+
+function nextImg() {
+  const currentImg = document.getElementById('showroom').firstElementChild;
+
+  if(currentImg.getAttribute('data-showid') != images.length - 1) {
+    updateShowroomImg(parseInt(currentImg.getAttribute('data-showid')) + 1);
+
+  } else {
+    currentImg.style.animation = 'shake 0.5s';
+
+    setTimeout(function() {
+      currentImg.style.animation = 'none';
+    }, 505);
+  }
+}
+
+function previousImg() {
+  const currentImg = document.getElementById('showroom').firstElementChild;
+
+  if(currentImg.getAttribute('data-showid') != 0) {
+    updateShowroomImg(parseInt(currentImg.getAttribute('data-showid')) - 1);
+
+  } else {
+    currentImg.style.animation = 'shake 0.5s';
+
+    setTimeout(function() {
+      currentImg.style.animation = 'none';
+    }, 505);
+  }
+}
+
+function closeImg() {
+  showRoom(false);
+}
+
+function fullImg() {
+  if(isShowroomVisible()) {
+    const currentImg = document.getElementById('showroom').firstElementChild;
+    const newtab = window.open(currentImg.src, '_blank');
+    newtab.focus();
+  }
+}
+
+function updateImgCounter() {
+  const counter = document.getElementById('imgCounter');
+  const currentImg = document.getElementById('showroom').firstElementChild;
+
+  counter.textContent = (parseInt(currentImg.getAttribute('data-showid')) + 1) + '/' + images.length;
+}
+
+function updateShowroomImg(showId) {
+  const currentImg = document.getElementById('showroom').firstElementChild;
+
+  currentImg.setAttribute('data-showid', showId);
+  currentImg.setAttribute('src', images[showId]);
+
+  if(showId == 0) {
+    document.getElementById('previousImg').style.visibility = 'hidden';
+  } else {
+    document.getElementById('previousImg').style.visibility = 'visible';
+  }
+
+  if(showId == images.length - 1) {
+    document.getElementById('nextImg').style.visibility = 'hidden';
+  } else {
+    document.getElementById('nextImg').style.visibility = 'visible';
+  }
+
+  updateImgCounter();
+}
+
+function showImageClick() {
+  const showroom = document.getElementById('showroom');
+
+  if(!showroom.firstElementChild.tagName.match(/img/i)) {
+    const img = document.createElement('img');
+    img.addEventListener('click', nextImg, false);
+    img.addEventListener('dblclick', closeImg, false);
+    showroom.insertBefore(img, showroom.firstChild);
+  }
+
+  updateShowroomImg(this.getAttribute('data-showid'));
+  showRoom(true);
+}
+
+function addImage(imgPath) {
+  const img = document.createElement('img');
+  const gallery = document.getElementById('gallery');
+
+  img.setAttribute('src', imgPath);
+  img.setAttribute('data-showid', images.length);
+  img.onclick = showImageClick;
+  img.addEventListener('load', updateProgressBar, false);
+
+  images.push(imgPath);
+  gallery.appendChild(img);
+}
+
+function showRoom(show) {
+  const overlay = document.getElementById('overlay');
+
+  if(show) {
+    overlay.style.display = 'flex';
+
+  } else {
+    overlay.style.display = 'none';
+  }
+}
+
+function isShowroomVisible() {
+  return document.getElementById('overlay').style.display == 'flex';
+}
+
+function createGallery() {
+  const xhttp = new XMLHttpRequest();
+  xhttp.timeout = 3000;
+
+  xhttp.onreadystatechange = function() {
+    if(xhttp.readyState == 4) {
+      if(xhttp.status == 200) {
+        const lines = xhttp.responseText.split("\n");
+        totalImg = (xhttp.responseText.match(/\.(jp|pn)g"/ig) || '').length;
+        updateProgressBar();
+
+        for(var i = 0; i < lines.length; i++) {
+          if(lines[i].match(/\.(jp|pn)g">/i)) {
+            const imgPath = lines[i].replace(/.*"(.*)".*/, '$1');
+            addImage('img/' + imgPath);
+          }
+        }
+      } else {
+        document.getElementById('progressBar').querySelector('span').textContent = 'Error';
+        alert('There was an error.');
+      }
+    }
+  };
+
+  xhttp.open('GET', 'img/', true);
+  xhttp.send();
+}
+
+function shortcuts(e) {
+  e = e || window.event;
+
+  switch(e.keyCode) {
+    case 34: // page down
+    case 40: // down arrow
+    case 75: // k
+    case 35: // end
+      if(!isShowroomVisible()) {
+        break;
+      }
+
+    case 37: // left arrow
+      e.preventDefault();
+
+      if(isShowroomVisible() && e.keyCode != 35) {
+        previousImg();
+
+      } else {
+        document.getElementById('gallery').lastElementChild.click();
+      }
+
+      break;
+
+    case 33: // page up
+    case 38: // up arrow
+    case 74: // j
+    case 36: // home
+      if(!isShowroomVisible()) {
+        break;
+      }
+
+    case 32: // space
+    case 39: // right arrow
+      e.preventDefault();
+
+      if(isShowroomVisible() && e.keyCode != 36) {
+        nextImg();
+
+      } else {
+        document.getElementById('gallery').firstElementChild.click();
+      }
+
+      break;
+
+    case 27: // escape
+      e.preventDefault();
+      showRoom(false);
+
+      break;
+
+    case 70: // f
+      e.preventDefault();
+      fullImg();
+
+      break;
+  }
+}
+
+/* Touch functions from https://stackoverflow.com/questions/2264072/detect-a-finger-swipe-through-javascript-on-the-iphone-and-android#answer-23230280 */
+
+function touchStart(e) {
+  touchXDown = e.touches[0].clientX;
+  touchYDown = e.touches[0].clientY;
+};
+
+function touchMove(e) {
+  if(!touchXDown || !touchYDown || !isShowroomVisible()) {
+    return;
+  }
+
+  e.preventDefault();
+
+  var xUp = e.touches[0].clientX;
+  var yUp = e.touches[0].clientY;
+  var xDiff = touchXDown - xUp;
+  var yDiff = touchYDown - yUp;
+
+  if(Math.abs(xDiff) > Math.abs(yDiff)) {
+    if(xDiff > 0) { // swipe to left
+      nextImg();
+
+    } else { // swipe to right
+      previousImg();
+    }
+  } else { // swipe up or down
+    closeImg();
+  }
+
+  touchXDown = null;
+  touchYDown = null;                                             
+};
+
+</script>
+<style>
+
+body {
+  font-family: serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+h1 {
+  background-image: linear-gradient(to right, #000, #fff);
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: center center;
+  font-size: 2em;
+  width: 100%;
+  margin: 0.2em 0 0.2em 0;
+  font-weight: bold;
+  text-shadow: 1px 1px #aaa;
+}
+
+h1 div {
+  display: inline-block;
+  background-color: #fff;
+  padding: 5px;
+  margin-left: 1.2em;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+#gallery > img {
+  flex: 1 1 auto;
+  width: auto;
+  height: auto;
+  max-width: 313px;
+  max-height: 220px;
+  margin: 4px;
+  object-fit: cover;
+  transition: transform .2s;
+  border-radius: 1px;
+  box-shadow: 1px 1px 1px #333;
+  background-color: #333;
+  border: 1px solid #fff;
+}
+
+#gallery:hover img {
+  filter: brightness(.9) grayscale(.5);
+}
+
+#gallery img:hover {
+  filter: none;
+}
+
+#showroom {
+  display: flex;
+  position: relative;
+  border: 1px solid #fff;
+  padding: 15px;
+  background-color: #fff;
+  justify-content: center;
+  align-items: center;
+}
+
+#showroom img {
+  flex: 0 0 auto;
+  max-width: 90vw;
+  max-height: 90vh;
+  border: 1px solid #000;
+}
+
+#imgCounter {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 20px;
+  color: #fff;
+  text-shadow: 1px 1px #000;
+}
+
+#closeImg,
+#fullImg,
+#previousImg,
+#nextImg {
+  display: flex;
+  position: absolute;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0);
+  cursor: pointer;
+}
+
+#fullImg {
+  bottom: 0;
+  width: 100%;
+  height: 10%;
+  padding-bottom: 20px;
+}
+
+#previousImg,
+#nextImg {
+  top: 0;
+  height: 100%;
+  width: 20%;
+}
+
+#closeImg {
+  top: 0;
+  width: 100%;
+  height: 10%;
+  padding-top: 20px;
+}
+
+#closeImg,
+#previousImg {
+  left: 0;
+}
+
+#closeImg,
+#nextImg {
+  right: 0;
+}
+
+#closeImg:hover,
+#fullImg:hover,
+#previousImg:hover,
+#nextImg:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+#closeImg:hover:after,
+#fullImg:hover:after,
+#previousImg:hover:after,
+#nextImg:hover:after {
+  content: attr(data-txt);
+  font-size: 3em;
+  text-shadow: 1px 1px #000;
+  font-weight: bold;
+  color: #fff;
+}
+
+#closeImg:hover:after {
+  color: #f88;
+}
+
+#overlay {
+  display: none;
+  position: fixed;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.95);
+  z-index: 60;
+}
+
+#progressBar {
+  margin: 3px;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 50;
+  height: 50px;
+  width: 250px;
+  background-color: #ccc;
+  margin: 0 25px 20px 0;
+  border: 1px solid #333;
+}
+
+#progressBar > div {
+  height: 50px;
+  width: 0px;
+  background-color: #333;
+}
+
+#progressBar > span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 20px;
+  height: 50px;
+  margin-top: -50px;
+  text-shadow: 1px 1px #000;
+}
+
+/* Shake from https://www.w3schools.com/howto/howto_css_shake_image.asp */
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+} 
+
+</style>
+</head>
+
+<body>
+<h1 id="title"><div>Photos</div></h1>
+<div id="progressBar">
+  <div></div>
+  <span>Loading...</span>
+</div>
+<div id="gallery"></div>
+<div id="overlay">
+  <div id="showroom">
+    <div id="closeImg" data-txt="&empty;"></div>
+    <div id="imgCounter"></div>
+    <div id="previousImg" data-txt="&larr;"></div>
+    <div id="nextImg" data-txt="&rarr;"></div>
+    <div id="fullImg" data-txt="&hArr;"></div>
+  </div>
+</div>
+</body>
+</html>

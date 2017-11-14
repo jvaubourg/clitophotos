@@ -1,0 +1,32 @@
+[Manual]
+
+  Just put your photos in an img/ directory, and this index.html file in the parent directory.
+  Your webserver has to have the +Indexes directive (directory listing) enabled at least for img/.
+
+  For the photo gallery of an event named "eventName" (https://example.com/eventName/), you should have:
+    % ls eventName/
+    index.html img
+
+  Resizing and rotating:
+    % for i in myPhotos/*; do convert $i -resize 1024x1024 eventName/img/$(basename $i); done 
+    % exiftran -ai eventName/img/*
+
+[Shortcuts]
+
+  - Keyboards
+      Next photo:      RightArrow / UpArrow / J / PageUp / Space
+      Previous photo:  LeftArrow / DownArrow / K / PageDown
+      First photo:     Home
+      Last photo:      End
+      Show full-size:  F
+      Close show room: Escape
+
+  - Touchscreens
+      Next photos:     SwipeToLeft / Tap
+      Previous photos: SwipeToRight
+      Close show room: SwipeUp / SwipeDown
+
+[License]
+
+  Julien Vaubourg (c) 2017
+  WTFPL v2
