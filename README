@@ -7,9 +7,17 @@
     % ls event_name/
     index.html img
 
-  Resizing and rotating (before uploading):
-    % for i in myPhotos/*; do convert $i -resize 1024x1024 event_name/img/$(basename $i); done 
-    % exiftran -ai event_name/img/*
+  Before uploading:
+
+    - Resizing:
+       % for i in myPhotos/*; do convert $i -resize 1024x1024 event_name/img/$(basename $i); done 
+    - Rotating:
+       % exiftran -ai event_name/img/*
+    - Reordering: 
+       With Geeqie: https://www.youtube.com/watch?v=jI0BiaQzmms
+       (use drag and drop or sort by Exif-date, before renaming)
+    - Cleaning metadata:
+       % exiftool -all= event_name/img/*
 
 [Shortcuts]
 
