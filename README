@@ -3,13 +3,13 @@
   Just put your photos in an img/ directory, and this index.html file in the parent directory.
   Your webserver has to have the +Indexes directive (directory listing) enabled at least for img/.
 
-  For the photo gallery of an event named "eventName" (https://example.com/eventName/), you should have:
-    % ls eventName/
+  For the photo gallery of an event named "event_name" (https://example.com/event_name/), you should have:
+    % ls event_name/
     index.html img
 
-  Resizing and rotating:
-    % for i in myPhotos/*; do convert $i -resize 1024x1024 eventName/img/$(basename $i); done 
-    % exiftran -ai eventName/img/*
+  Resizing and rotating (before uploading):
+    % for i in myPhotos/*; do convert $i -resize 1024x1024 event_name/img/$(basename $i); done 
+    % exiftran -ai event_name/img/*
 
 [Shortcuts]
 
@@ -28,5 +28,5 @@
 
 [License]
 
-  Julien Vaubourg (c) 2017
+  Julien Vaubourg (c) 2018
   WTFPL v2
