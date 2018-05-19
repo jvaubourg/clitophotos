@@ -17,7 +17,7 @@
        With Geeqie: https://www.youtube.com/watch?v=jI0BiaQzmms
        (use drag and drop or sort by Exif-date, before renaming)
     - Cleaning metadata:
-       % exiftool -all= event_name/img/*
+       % exiftool -overwrite_original -all= event_name/img/*
 
 [Shortcuts]
 
